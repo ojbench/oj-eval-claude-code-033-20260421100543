@@ -40,14 +40,19 @@ class ACMOJClient:
         self.submission_log_file = '/workspace/submission_ids.log'
         
 
-    def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] = None, 
-                     params: Dict[str, Any] = None) -> Optional[Dict]:
+    def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] = None,
+                     params: Dict[str, Any] = None, json_data: Dict[str, Any] = None) -> Optional[Dict]:
         url = f"{self.api_base}{endpoint}"
         try:
             if method.upper() == "GET":
                 response = requests.get(url, headers=self.headers, params=params, timeout=10, proxies={"https": None, "http": None})
             elif method.upper() == "POST":
-                response = requests.post(url, headers=self.headers, data=data, timeout=10, proxies={"https": None, "http": None})
+                if json_data:
+                    headers = self.headers.copy()
+                    headers["Content-Type"] = "application/json"
+                    response = requests.post(url, headers=headers, json=json_data, timeout=10, proxies={"https": None, "http": None})
+                else:
+                    response = requests.post(url, headers=self.headers, data=data, timeout=10, proxies={"https": None, "http": None})
             else:
                 print(f"Unsupported HTTP method: {method}")
                 return None
@@ -84,16 +89,16 @@ class ACMOJClient:
             print(f"⚠️ Warning: Failed to save submission ID: {e}")
 
     def submit_code(self, problem_id: int, language: str, code: str) -> Optional[Dict]:
-        data = {"language": language, "code": code}
-        result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
+        json_data = {"language": language, "code": code}
+        result = self._make_request("POST", f"/problem/{problem_id}/submit", json_data=json_data)
         if result and 'id' in result:
             self._save_submission_id(result['id'])
 
         return result
 
     def submit_git(self, problem_id: int, git_url: str) -> Optional[Dict]:
-        data = {"language": "git", "code": git_url}
-        result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
+        json_data = {"language": "git", "code": git_url}
+        result = self._make_request("POST", f"/problem/{problem_id}/submit", json_data=json_data)
         if result and 'id' in result:
             self._save_submission_id(result['id'])
 
